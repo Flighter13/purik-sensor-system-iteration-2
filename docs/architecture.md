@@ -9,9 +9,11 @@ Iteration 2 supports two R4 sensor nodes simultaneously. Both boards run the sam
 Responsibilities:
 
 - own sensor-specific drivers
+- probe supported interfaces for attached devices
+- register detected devices at runtime
 - own vendor/protocol-specific parsing
 - translate measurements into common Purik payloads
-- maintain local sensor health/status
+- maintain local sensor presence, initialization, and health
 - timestamp and sequence outgoing messages
 - advertise node identity and attached sensor capabilities
 - transmit Purik messages over nRF24L01
@@ -31,6 +33,46 @@ Supported sensor families:
 
 Sensors are not permanently assigned to a particular R4. Runtime discovery is intended to let either node host any supported sensor set that its available interfaces can electrically and physically support.
 
+## Runtime sensor registry
+
+Each R4 contains a `SensorRegistry` of driver instances. Drivers implement the common `SensorDriver` interface and expose a `SensorDescriptor` containing:
+
+- node-local sensor ID
+- sensor class
+- driver ID
+- display name
+- output schema name
+- schema version
+
+The `DeviceManager` periodically probes supported devices and performs lifecycle transitions:
+
+```text
+supported driver
+    |
+probe interface
+    |
++---+-------------------+
+|                       |
+not present          present
+                        |
+                     begin()
+                        |
+                    initialized
+                        |
+                     update()
+                        |
+             health / data / detach
+```
+
+A sensor can therefore be connected or disconnected without changing ground-control application code. The node can report attachment, detachment, health, and capability information upstream.
+
+### First implemented discovery drivers
+
+- MAX-M10S: detected by I2C address `0x42`
+- GY-521 / MPU-6050: detected through the `WHO_AM_I` register at I2C address `0x68`/`0x69`
+
+Radar and LiDAR drivers remain intentionally pending until the UNO R4 UART and electrical-interface arrangements are finalized.
+
 ### Ground Control — Arduino UNO Q
 
 Responsibilities:
@@ -38,6 +80,7 @@ Responsibilities:
 - receive Purik messages from both R4 nodes simultaneously
 - key all state by `nodeId` and `sensorId`
 - maintain node/device registry and online/offline state
+- process attach/detach and health transitions
 - validate protocol versions and message types
 - log telemetry
 - perform analysis and future sensor fusion across nodes
@@ -49,7 +92,8 @@ Responsibilities:
 ```text
  R4 sensor-node-01                  R4 sensor-node-02
  +------------------+               +------------------+
- | swappable sensors|               | swappable sensors|
+ | SensorRegistry   |               | SensorRegistry   |
+ | DeviceManager    |               | DeviceManager    |
  | drivers/adapters |               | drivers/adapters |
  +---------+--------+               +---------+--------+
            |                                  |
@@ -61,6 +105,8 @@ Responsibilities:
                           v
                      Arduino UNO Q
                      Ground Control
+                          |
+                    NodeRegistry
                           |
                registry / fusion / log
                           |
@@ -76,6 +122,8 @@ Sensor hardware
     |
 Vendor-specific driver
     |
+SensorRegistry / DeviceManager
+    |
 Payload adapter
     |
 Purik common message (nodeId + sensorId + schema)
@@ -84,7 +132,7 @@ Transport (nRF24 / future Wi-Fi)
     |
 Ground-control receiver
     |
-Purik decoder + multi-node registry
+Purik decoder + multi-node NodeRegistry
     |
 Analysis / logging / fusion
     |
@@ -112,4 +160,9 @@ The stable integration boundary is the Purik message contract, not a vendor comm
 
 ## Planned evolution
 
-Phase 1 proves simultaneous operation of two known nodes. Later phases add runtime sensor discovery, manifests, capability advertisement, configuration negotiation, health monitoring, recording/replay, redundant transports, and more than two nodes without changing the message model.
+1. prove runtime I2C discovery and lifecycle management
+2. add GNSS and IMU measurement payload adapters
+3. add nRF24 message transport and ground-control decoding
+4. verify dual-node simultaneous operation
+5. add LiDAR and radar drivers after UART/interface validation
+6. add richer manifests, configuration negotiation, logging/replay, health monitoring, and redundant transports
