@@ -15,7 +15,10 @@ class SensorRecord:
     sensor_id: int
     sensor_class: str
     schema: str
+    driver_id: str = "unknown"
+    display_name: str = "unknown"
     online: bool = True
+    healthy: bool = True
     last_seen_s: float = field(default_factory=monotonic)
 
 
@@ -51,30 +54,87 @@ class NodeRegistry:
         sensor_id: int,
         sensor_class: str,
         schema: str,
+        driver_id: str = "unknown",
+        display_name: str = "unknown",
     ) -> SensorRecord:
         node = self.touch_node(node_id)
         sensor = node.sensors.get(sensor_id)
+
         if sensor is None:
             sensor = SensorRecord(
                 sensor_id=sensor_id,
                 sensor_class=sensor_class,
                 schema=schema,
+                driver_id=driver_id,
+                display_name=display_name,
             )
             node.sensors[sensor_id] = sensor
         else:
             sensor.sensor_class = sensor_class
             sensor.schema = schema
+            sensor.driver_id = driver_id
+            sensor.display_name = display_name
             sensor.online = True
             sensor.last_seen_s = monotonic()
+
         return sensor
+
+    def mark_sensor_detached(self, node_id: int, sensor_id: int) -> None:
+        node = self.nodes.get(node_id)
+        if node is None:
+            return
+
+        sensor = node.sensors.get(sensor_id)
+        if sensor is not None:
+            sensor.online = False
+            sensor.healthy = False
+            sensor.last_seen_s = monotonic()
+
+    def set_sensor_health(self, node_id: int, sensor_id: int, healthy: bool) -> None:
+        node = self.nodes.get(node_id)
+        if node is None:
+            return
+
+        sensor = node.sensors.get(sensor_id)
+        if sensor is not None:
+            sensor.healthy = healthy
+            sensor.online = True
+            sensor.last_seen_s = monotonic()
 
     def mark_timeouts(self) -> None:
         now = monotonic()
+
         for node in self.nodes.values():
             node.online = (now - node.last_seen_s) <= self.timeout_s
+
             for sensor in node.sensors.values():
-                sensor.online = node.online and ((now - sensor.last_seen_s) <= self.timeout_s)
+                if sensor.online:
+                    sensor.online = node.online and (
+                        (now - sensor.last_seen_s) <= self.timeout_s
+                    )
 
     def online_nodes(self) -> List[NodeRecord]:
         self.mark_timeouts()
         return [node for node in self.nodes.values() if node.online]
+
+    def snapshot(self) -> dict:
+        self.mark_timeouts()
+
+        return {
+            node_id: {
+                "name": node.name,
+                "online": node.online,
+                "sensors": {
+                    sensor_id: {
+                        "class": sensor.sensor_class,
+                        "schema": sensor.schema,
+                        "driver_id": sensor.driver_id,
+                        "display_name": sensor.display_name,
+                        "online": sensor.online,
+                        "healthy": sensor.healthy,
+                    }
+                    for sensor_id, sensor in node.sensors.items()
+                },
+            }
+            for node_id, node in self.nodes.items()
+        }
