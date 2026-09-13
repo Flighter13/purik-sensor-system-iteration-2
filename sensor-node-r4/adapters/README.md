@@ -1,12 +1,16 @@
 # Payload adapters
 
-Adapters translate driver-native data into versioned Purik payload schemas.
+Adapters translate driver-native data into versioned Purik payload schemas. They normalize units and keep vendor-specific data structures from crossing the Purik interface boundary.
 
-Examples:
+## Implemented adapters
 
-- TI radar targets -> `RADAR_TARGET_LIST`
-- A1M8 samples -> `LIDAR_SCAN_SAMPLE`
-- MAX-M10S navigation data -> `GNSS_FIX`
-- MPU-6050 measurements -> `IMU_SAMPLE`
+- `GnssAdapter` — `MAXM10SReading` -> `GnssFixPayloadV1`
+- `ImuAdapter` — `GY521Reading` -> `ImuSamplePayloadV1`
+- `RadarAdapter` — `IWRL6432Target` -> `RadarTargetV1`
+- `LidarAdapter` — `RPLidarA1Sample` -> `LidarSamplePayloadV1`
 
-Adapters should normalize units and keep vendor-specific data structures from crossing the Purik interface boundary.
+The radar and LiDAR adapters are ready, but their drivers remain interface scaffolds until the UNO R4 UART and electrical details are finalized.
+
+## Design rule
+
+Ground control should consume Purik schemas such as `gnss.fix.v1`, `imu.sample.v1`, `radar.target.v1`, and `lidar.sample.v1`, not vendor-native structures.
