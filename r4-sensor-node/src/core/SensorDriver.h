@@ -1,8 +1,8 @@
 #pragma once
 
 #include <Arduino.h>
-#include "../../common/PurikSensorTypes.h"
-#include "../../common/SensorDescriptor.h"
+#include "PurikSensorTypes.h"
+#include "SensorDescriptor.h"
 
 class SensorDriver {
  public:
