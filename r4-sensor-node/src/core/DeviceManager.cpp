@@ -6,7 +6,6 @@ DeviceManager::DeviceManager(SensorRegistry& registry)
 
 void DeviceManager::begin() {
   forceProbe();
-  registry_.beginAll();
   reportTransitions();
 }
 

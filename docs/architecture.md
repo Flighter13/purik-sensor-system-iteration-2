@@ -1,5 +1,24 @@
 # Iteration 2 Architecture
 
+## Repository and build boundaries
+
+The repository is a monorepo, but it is not one firmware image:
+
+- `r4-sensor-node/` is a PlatformIO project for either UNO R4 WiFi node. Its
+  Arduino entry point is `src/purik-sensor-node.ino`; all other firmware remains
+  in modular drivers, adapters, registry/core, configuration, and transport
+  sources.
+- `uno-q-ground-station/mcu/` is the STM32U585 Arduino/Zephyr package, built with
+  the UNO Q Arduino CLI platform. It currently contains a build/upload smoke
+  test; the receiver and bridge are pending.
+- `uno-q-ground-station/linux/` is the separately run Debian/Python application.
+- `common/` is the single source of truth for the embedded Purik protocol,
+  message, version, sensor, and descriptor types.
+
+The R4 firmware, UNO Q MCU smoke test, and UNO Q Linux registry baseline are
+executable today. The UNO Q receiver, radio wiring, and MCU/Linux bridge contract
+remain to be implemented.
+
 ## System split
 
 ### Sensor Nodes — Two Arduino UNO R4 WiFi boards
