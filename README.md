@@ -1,25 +1,35 @@
 # Purik Sensor System — Iteration 2
 
-Iteration 2 separates sensor-node drivers and adapters from ground-control processing and the user interface.
+Iteration 2 is organized as a monorepo containing independently buildable/deployable board packages plus shared protocol definitions.
 
-## Planned layout
+## Repository layout
 
-- `common/` — shared protocol definitions
+- `common/` — shared Purik protocol, message, version, sensor, and descriptor definitions
+- `r4-sensor-node/` — Arduino UNO R4 WiFi PlatformIO sensor-node package
+- `uno-q-ground-station/` — Arduino UNO Q ground-control package
+  - `mcu/` — UNO Q microcontroller-side bridge/control code
+  - `linux/` — Debian-side Python services, telemetry, API, and dashboard
 - `docs/` — architecture and interface documentation
-- `sensor-node-r4/` — Arduino UNO R4 WiFi sensor-node firmware
-- `ground-control-q/` — Arduino UNO Q ground-control software
-- `tests/` — protocol and integration tests
-
-## Initial hardware
-
-Sensor node: Arduino UNO R4 WiFi with IWRL6432BOOST radar, RPLIDAR A1M8, MAX-M10S GNSS, GY-521 IMU, and nRF24L01 radio.
-
-Ground control: Arduino UNO Q with nRF24L01 radio and touchscreen dashboard.
+- `tests/` — protocol and integration tests as they are added
 
 ## Design rule
 
+Each board/application package must be independently buildable. Shared protocol contracts live at repository level rather than being duplicated inside board packages.
+
 Drivers handle hardware-specific details. Adapters translate sensor output into a common Purik message format. Transports move those messages. Ground-control applications consume the common format.
 
-## Current phase
+## R4 sensor node
 
-The repository is being established as the clean Iteration 2 baseline. Hardware-specific drivers will be added after finalizing the UNO R4 UART allocation and verifying interface voltage/power requirements for the radar and LiDAR.
+From `r4-sensor-node/`:
+
+```sh
+pio run
+pio run -t upload
+pio device monitor
+```
+
+The same R4 package is intended to support multiple physical nodes, with node identity and enabled capabilities controlled by configuration.
+
+## UNO Q ground station
+
+The UNO Q package separates the MCU and Debian/Linux execution environments so each can be developed and deployed independently while remaining part of the same ground-control system.
