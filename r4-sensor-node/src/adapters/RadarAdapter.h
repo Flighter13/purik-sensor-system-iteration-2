@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../common/PurikMessages.h"
+#include "PurikMessages.h"
 #include "../drivers/IWRL6432Driver.h"
 
 class RadarAdapter {
